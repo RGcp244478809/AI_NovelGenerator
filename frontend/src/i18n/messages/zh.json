@@ -509,7 +509,18 @@
     "title": "AI 小说生成器",
     "settings": "设置",
     "language": "语言",
-    "theme": "主题"
+    "theme": "主题",
+    "logout": "退出登录"
+  },
+  "auth": {
+    "title": "登录 AI 小说生成器",
+    "description": "请输入管理员账号以继续访问写作空间。",
+    "username": "用户名",
+    "password": "密码",
+    "signIn": "登录",
+    "signingIn": "正在登录…",
+    "loginFailed": "登录失败，请稍后重试",
+    "securityHint": ""
   },
   "settings": {
     "title": "系统设置",

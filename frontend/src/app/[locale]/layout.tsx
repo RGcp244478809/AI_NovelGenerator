@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Providers } from "./providers";
 import Navbar from "@/components/layout/Navbar";
-import { WorkspacePages } from "@/components/layout/WorkspacePages";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -45,9 +45,9 @@ export default async function LocaleLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <NextIntlClientProvider messages={messages}>
           <Providers locale={locale}>
-            <Navbar />
-            <main className="flex min-h-0 flex-1 flex-col"><WorkspacePages>{children}</WorkspacePages></main>
-            {modal}
+            <AuthShell locale={locale} navigation={<Navbar />} modal={modal}>
+              {children}
+            </AuthShell>
           </Providers>
         </NextIntlClientProvider>
       </body>

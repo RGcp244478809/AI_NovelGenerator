@@ -1,6 +1,8 @@
 import { notifyResourceChange } from "@/lib/resourceChanges";
+import { notifyAuthenticationRequired } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8200";
+// 浏览器只访问 Next.js 同源地址；next.config.ts 在服务端把 API 与静态封面代理到后端。
+const API_BASE = "";
 
 /** 成功的业务写入通知常驻助手更新资料；生成和配置请求不算保存。
  * Args: path 已成功的业务请求路径。
@@ -291,6 +293,10 @@ function getRequestId(body: unknown, fallbackRequestId?: string | null): string 
  */
 async function assertResponseOk(response: Response): Promise<void> {
   if (response.ok) return;
+
+  if (response.status === 401) {
+    notifyAuthenticationRequired();
+  }
 
   const rawBody = await response.text().catch(() => "");
   let body: unknown = rawBody;

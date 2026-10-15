@@ -179,7 +179,31 @@ mongo_transaction_mode: "required"
 
 附带的 Docker 配置使用命名数据卷保存数据，只将端口发布到本机 `127.0.0.1`，没有配置数据库密码。修改数据库连接后需要重启后端。
 
-### 3. 启动服务
+### 3. 配置登录鉴权
+
+后端默认启用单管理员鉴权；没有配置管理员凭据时会拒绝启动，避免 NAS 或反向代理配置错误时暴露数据。请在启动后端的进程、容器或 NAS 面板中设置环境变量（项目根目录的 `.env.example` 只作示例，应用不会自动读取它）：
+
+```powershell
+$env:NOVEL_GENERATOR_AUTH_USERNAME = "admin"
+$env:NOVEL_GENERATOR_AUTH_PASSWORD = "请替换为至少12位的强密码"
+$env:NOVEL_GENERATOR_AUTH_SESSION_SECRET = "请替换为至少32位的随机会话密钥"
+```
+
+生产环境建议不保存明文密码。先交互生成 PBKDF2-SHA256 摘要：
+
+```powershell
+python -m backend.auth hash-password
+```
+
+然后设置 `NOVEL_GENERATOR_AUTH_PASSWORD_HASH`，并且不要再设置 `NOVEL_GENERATOR_AUTH_PASSWORD`。如果通过 HTTPS 访问，还必须设置：
+
+```powershell
+$env:NOVEL_GENERATOR_AUTH_COOKIE_SECURE = "true"
+```
+
+默认会话有效期为 12 小时，可用 `NOVEL_GENERATOR_AUTH_SESSION_TTL_SECONDS` 调整。未设置稳定的 `NOVEL_GENERATOR_AUTH_SESSION_SECRET` 时，后端会在每次启动时生成临时密钥，已有会话需要重新登录。
+
+### 4. 启动服务
 
 Windows 下双击 **`start.bat`**，在桌面启动器中启动服务。启动器可以设置端口、查看日志、停止服务；生产模式会在首次运行或相关源码、配置变化后构建前端。
 
@@ -191,7 +215,7 @@ Windows 下双击 **`start.bat`**，在桌面启动器中启动服务。启动�
 
 关闭启动器会停止它启动的服务。更改端口前先停止服务；如果端口已占用，先确认已有进程是否就是当前项目。
 
-### 4. 模型配置与使用流程
+### 5. 模型配置与使用流程
 
 打开**设置**，填写服务商的 API Key、接口地址和模型名称，然后启用对应配置。项目包含 OpenAI、DeepSeek、Gemini、Claude 及相应兼容接口的适配；具体参数以所选适配器和服务商支持范围为准。
 
@@ -221,7 +245,7 @@ npm run build
 npm run start -- --hostname 127.0.0.1 --port 3300
 ```
 
-如果后端地址不是默认值，在构建前设置 `NEXT_PUBLIC_API_BASE`。例如 PowerShell 中使用 `$env:NEXT_PUBLIC_API_BASE = "http://127.0.0.1:8200"`。桌面启动器会根据它管理的端口设置这个地址。
+如果后端地址不是默认值，在构建前设置 `NEXT_PUBLIC_API_BASE`。例如 PowerShell 中使用 `$env:NEXT_PUBLIC_API_BASE = "http://127.0.0.1:8200"`。该地址现在是 Next.js 服务端同源代理的目标，不再由浏览器直接访问；桌面启动器会根据它管理的端口自动设置。
 
 数据库连接也可以通过 `NOVEL_GENERATOR_MONGODB_URL` 和 `NOVEL_GENERATOR_MONGO_DATABASE_NAME` 环境变量覆盖。
 
@@ -238,7 +262,7 @@ npm run start -- --hostname 127.0.0.1 --port 3300
 
 升级前先备份并停止服务，再更新代码、安装依赖和重新构建前端。旧版与新版的数据结构不同，应使用独立数据库。
 
-应用面向本地使用，没有供公网使用的用户认证。不要把应用服务或无密码的 MongoDB 直接暴露到互联网。提交问题时，请去掉密钥、数据库密码、个人路径和未公开的小说内容。
+应用使用单管理员登录保护前端、API、静态封面和 API 文档。它是访问门禁，不提供多用户数据隔离；所有已登录会话仍共享同一套小说、模型和系统配置。公网部署必须使用 HTTPS、启用 Secure Cookie，并且不要把后端端口或无密码的 MongoDB 直接暴露到互联网。提交问题时，请去掉登录凭据、会话密钥、API Key、数据库密码、个人路径和未公开的小说内容。
 
 <details>
 <summary><strong>常见问题</strong></summary>

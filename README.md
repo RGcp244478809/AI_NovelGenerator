@@ -179,7 +179,31 @@ mongo_transaction_mode: "required"
 
 The bundled configuration uses named volumes, publishes its port only on `127.0.0.1`, and has no database password. Restart the backend after changing its database connection.
 
-### 3. Start services
+### 3. Configure authentication
+
+The backend enables a single-administrator login by default. It refuses to start without administrator credentials so a NAS or reverse-proxy mistake cannot silently expose the application. Set these variables in the backend process, container, or NAS control panel (`.env.example` is a reference only; the application does not load it automatically):
+
+```powershell
+$env:NOVEL_GENERATOR_AUTH_USERNAME = "admin"
+$env:NOVEL_GENERATOR_AUTH_PASSWORD = "replace-with-a-strong-12-character-password"
+$env:NOVEL_GENERATOR_AUTH_SESSION_SECRET = "replace-with-at-least-32-random-characters"
+```
+
+For production, prefer a password hash instead of storing a plaintext password. Generate a PBKDF2-SHA256 hash interactively:
+
+```powershell
+python -m backend.auth hash-password
+```
+
+Set the result as `NOVEL_GENERATOR_AUTH_PASSWORD_HASH` and do not also set `NOVEL_GENERATOR_AUTH_PASSWORD`. HTTPS deployments must also set:
+
+```powershell
+$env:NOVEL_GENERATOR_AUTH_COOKIE_SECURE = "true"
+```
+
+Sessions last 12 hours by default; change this with `NOVEL_GENERATOR_AUTH_SESSION_TTL_SECONDS`. If a stable `NOVEL_GENERATOR_AUTH_SESSION_SECRET` is not set, the backend creates a temporary key at each start and existing sessions must sign in again.
+
+### 4. Start services
 
 On Windows, double-click **`start.bat`**, then start the services in the desktop launcher. The launcher manages ports, logs, and service shutdown. Production mode builds the frontend on first use and after relevant source or configuration changes.
 
@@ -191,7 +215,7 @@ On Windows, double-click **`start.bat`**, then start the services in the desktop
 
 Closing the launcher stops the services it started. Stop services before changing ports. If a port is occupied, identify the existing process before starting another instance.
 
-### 4. Model configuration and usage
+### 5. Model configuration and usage
 
 Open **Settings**, enter your provider's API key, endpoint, and model name, and enable that configuration. The project includes adapters for OpenAI, DeepSeek, Gemini, Claude, and corresponding compatible endpoints. Supported parameters depend on the adapter and provider.
 
@@ -221,7 +245,7 @@ npm run build
 npm run start -- --hostname 127.0.0.1 --port 3300
 ```
 
-For a custom backend address, set `NEXT_PUBLIC_API_BASE` before building. In PowerShell, for example: `$env:NEXT_PUBLIC_API_BASE = "http://127.0.0.1:8200"`. The desktop launcher sets this address for the ports it manages.
+For a custom backend address, set `NEXT_PUBLIC_API_BASE` before building. In PowerShell, for example: `$env:NEXT_PUBLIC_API_BASE = "http://127.0.0.1:8200"`. This address is now the target of the server-side same-origin proxy in Next.js, rather than a backend URL contacted directly by the browser. The desktop launcher sets it for the ports it manages.
 
 `NOVEL_GENERATOR_MONGODB_URL` and `NOVEL_GENERATOR_MONGO_DATABASE_NAME` can override the corresponding database settings.
 
@@ -238,7 +262,7 @@ Novel data is stored in the configured MongoDB database and local files. AI acti
 
 Back up and stop services before updating code, reinstalling dependencies, and rebuilding the frontend. The legacy and rewritten versions use different data structures and should use separate databases.
 
-The application is intended for local use and has no public-facing user authentication. Do not directly expose it or an unauthenticated MongoDB deployment to the internet. Remove credentials, personal paths, and private manuscripts from public reports.
+The application protects the frontend, API, static covers, and API documentation with a single-administrator login. This is an access gate, not multi-user data isolation: every authenticated session shares the same novels, model settings, and system configuration. Public deployments must use HTTPS, enable Secure cookies, and avoid exposing the backend port or a passwordless MongoDB instance directly to the internet. Remove login credentials, session secrets, API keys, database passwords, private paths, and unpublished novel content before filing an issue.
 
 <details>
 <summary><strong>Common questions</strong></summary>

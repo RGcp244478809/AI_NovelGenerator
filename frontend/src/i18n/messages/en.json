@@ -509,7 +509,18 @@
     "title": "AI Novel Generator",
     "settings": "Settings",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "title": "Sign in to AI Novel Generator",
+    "description": "Enter the administrator account to continue to the writing workspace.",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "loginFailed": "Sign-in failed. Please try again.",
+    "securityHint": "Session credentials are stored only in a secure HttpOnly cookie."
   },
   "settings": {
     "title": "System Settings",

@@ -18,6 +18,11 @@ from backend.api.error_protocol import (
     request_validation_exception_handler,
     unhandled_exception_handler,
 )
+from backend.api.default_routers.auth_router import (
+    AuthenticationMiddleware,
+    router as auth_router,
+)
+from backend.auth import AuthService, load_auth_settings
 
 from backend.db.mongo import connect_to_mongo, close_mongo_connection
 from backend.db.indexes import init_all_indexes
@@ -111,6 +116,8 @@ async def lifespan(app: FastAPI):
         BACKEND_HOST,
         BACKEND_PORT,
     )
+    # 鉴权配置必须先于数据库连接完成校验，避免错误部署短暂暴露无保护接口。
+    app.state.auth_service = AuthService(load_auth_settings())
     # 首次启动保留当前有效提示词；已有方案只读取图，不再被旧 YAML 改变。
     for task in TASKS:
         task_flow_store.flow_store().get_default(task)
@@ -126,7 +133,7 @@ async def lifespan(app: FastAPI):
 
 COMMON_ERROR_RESPONSES = {
     status_code: {"model": ApiErrorResponse}
-    for status_code in (400, 404, 409, 422, 500, 502, 503, 504)
+    for status_code in (400, 401, 404, 409, 422, 429, 500, 502, 503, 504)
 }
 
 app = FastAPI(
@@ -143,6 +150,9 @@ app.add_exception_handler(RequestValidationError, request_validation_exception_h
 app.add_exception_handler(DomainApiError, domain_api_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
+# 鉴权位于路由和静态文件外层；CORS 再包裹鉴权，确保 401 也携带正确跨域响应头。
+app.add_middleware(AuthenticationMiddleware)
+
 # CORS 与启动器选定的前端端口保持一致，同时兼容 localhost 与 IPv4 回环地址。
 app.add_middleware(
     CORSMiddleware,
@@ -157,6 +167,7 @@ app.add_middleware(RequestIdMiddleware)
 os.makedirs("static/covers", exist_ok=True)
 app.mount("/static/covers", StaticFiles(directory="static/covers"), name="static_covers")
 
+app.include_router(auth_router)
 app.include_router(novel_router)
 app.include_router(initialization_router)
 app.include_router(volume_router)
